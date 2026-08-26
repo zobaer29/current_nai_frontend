@@ -158,11 +158,12 @@ export const InteractiveMap: React.FC = () => {
         {/* Fly-to view controller */}
         <MapViewController coords={selectedCoords} zoom={zoom} />
 
-        {/* Dark theme tile layer */}
+        {/* Configurable dark theme tile layer */}
         <TileLayer
-          attribution='&copy; <a href="https://carto.com/attributions">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          attribution={import.meta.env.VITE_MAP_ATTRIBUTION || '&copy; <a href="https://carto.com/attributions">CARTO</a>'}
+          url={import.meta.env.VITE_MAP_TILE_URL || 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'}
         />
+
 
         {/* User Location Marker & Privacy Approximate Radius */}
         <Marker

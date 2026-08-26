@@ -24,7 +24,10 @@ interface OutageState {
   error: string | null;
 }
 
-const DEFAULT_CENTER = { lat: 23.8069, lng: 90.3687 };
+const DEFAULT_CENTER = {
+  lat: Number(import.meta.env.VITE_DEFAULT_LAT) || 23.8069,
+  lng: Number(import.meta.env.VITE_DEFAULT_LNG) || 90.3687,
+};
 
 const initialState: OutageState = {
   currentAreaStatus: null,
