@@ -1,0 +1,62 @@
+{
+    "currentUser": {
+        "id": "usr_01",
+        "name": "Zobaer Islam",
+        "savedLocations": [
+            {
+                "id": "loc_1",
+                "name": "Home",
+                "area": "Mirpur 10",
+                "lat": 23.8069,
+                "lng": 90.3687
+            },
+            {
+                "id": "loc_2",
+                "name": "University",
+                "area": "United International University",
+                "lat": 23.7977,
+                "lng": 90.4497
+            },
+            {
+                "id": "loc_3",
+                "name": "Office",
+                "area": "Banani",
+                "lat": 23.7937,
+                "lng": 90.4066
+            }
+        ]
+    },
+    "currentArea": {
+        "areaName": "Mirpur 10",
+        "status": "POSSIBLE_OUTAGE",
+        "reportsCount": 23,
+        "confidenceScore": 91,
+        "activeMinutes": 47,
+        "nearbyStats": {
+            "offCount": 29,
+            "onCount": 8
+        }
+    },
+    "incidents": [
+        {
+            "id": "inc_101",
+            "area": "Mirpur 10",
+            "lat": 23.8069,
+            "lng": 90.3687,
+            "status": "POSSIBLE",
+            "reports": 23,
+            "confidence": 91,
+            "h3Index": "896526315ffffff"
+        },
+        {
+            "id": "inc_102",
+            "area": "Banani",
+            "lat": 23.7937,
+            "lng": 90.4066,
+            "status": "CONFIRMED",
+            "reports": 45,
+            "confidence": 98,
+            "h3Index": "896526316ffffff"
+        }
+    ]
+}
