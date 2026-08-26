@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState, AppDispatch } from '../store/store';
 import { setMapViewMode, toggleHeatmap } from '../store/outageSlice';
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Circle, CircleMarker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Navigation, Flame, Globe } from 'lucide-react';
 
@@ -202,30 +202,44 @@ export const InteractiveMap: React.FC = () => {
           }}
         />
 
-        {/* Incident Markers */}
+        {/* Incident Markers & Pulsing Map Dots */}
         {incidents.map((inc) => {
           const isResolved = inc.status === 'RESOLVED';
           const isConfirmed = inc.status === 'CONFIRMED';
+          const dotColor = isConfirmed ? '#ef4444' : isResolved ? '#10b981' : '#f59e0b';
           const icon = isResolved
             ? createResolvedIcon()
             : createOutageIcon(isConfirmed, inc.reports);
 
           return (
             <React.Fragment key={inc.id}>
-              {/* Optional Heatmap effect circle */}
+              {/* High-contrast Glowing Vector Dot on Map */}
+              <CircleMarker
+                center={[inc.lat, inc.lng]}
+                radius={isConfirmed ? 12 : 9}
+                pathOptions={{
+                  color: '#ffffff',
+                  weight: 2,
+                  fillColor: dotColor,
+                  fillOpacity: 0.95,
+                }}
+              />
+
+              {/* Heatmap effect zone */}
               {heatmapEnabled && !isResolved && (
                 <Circle
                   center={[inc.lat, inc.lng]}
-                  radius={isConfirmed ? 2500 : 1800}
+                  radius={isConfirmed ? 2800 : 1800}
                   pathOptions={{
-                    color: isConfirmed ? '#ef4444' : '#f59e0b',
-                    fillColor: isConfirmed ? '#ef4444' : '#f59e0b',
-                    fillOpacity: 0.25,
+                    color: dotColor,
+                    fillColor: dotColor,
+                    fillOpacity: 0.28,
                     weight: 0,
                   }}
                 />
               )}
 
+              {/* Animated Marker Overlay */}
               <Marker position={[inc.lat, inc.lng]} icon={icon}>
                 <Popup>
                   <div className="p-2 text-slate-900 font-sans min-w-[180px]">
