@@ -17,22 +17,29 @@ const MapViewController: React.FC<{ coords: { lat: number; lng: number }; zoom: 
 
 // Create custom animated Leaflet DivIcons
 const createOutageIcon = (isConfirmed: boolean, reports: number) => {
-  const colorClass = isConfirmed ? 'bg-red-500' : 'bg-amber-500';
-  const pulseClass = isConfirmed ? 'bg-red-400' : 'bg-amber-400';
+  const colorClass = isConfirmed
+    ? 'bg-gradient-to-r from-red-600 to-red-500 shadow-[0_0_25px_rgba(239,68,68,0.95)]'
+    : 'bg-gradient-to-r from-amber-600 to-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.85)]';
+  
+  const pulseClass = isConfirmed ? 'bg-red-500' : 'bg-amber-500';
 
   return L.divIcon({
     className: 'custom-outage-marker',
     html: `
-      <div className="relative flex items-center justify-center w-8 h-8">
-        <span className="animate-ping absolute inline-flex h-full w-full rounded-full ${pulseClass} opacity-75"></span>
-        <span className="relative inline-flex rounded-full h-8 w-8 ${colorClass} border-2 border-white shadow-xl flex items-center justify-center text-white font-bold text-[11px]">
+      <div className="relative flex items-center justify-center w-10 h-10">
+        <!-- Dual Radar Wave Ripples -->
+        <span className="animate-radar absolute inline-flex h-full w-full rounded-full ${pulseClass} opacity-80"></span>
+        <span className="animate-ping absolute inline-flex h-3/4 w-3/4 rounded-full ${pulseClass} opacity-60"></span>
+        
+        <!-- Glowing Core Badge -->
+        <span className="relative inline-flex rounded-full h-9 w-9 ${colorClass} border-2 border-white shadow-2xl flex items-center justify-center text-white font-extrabold text-[12px] tracking-tight transform hover:scale-110 transition-transform">
           ${reports}
         </span>
       </div>
     `,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-    popupAnchor: [0, -16],
+    iconSize: [40, 40],
+    iconAnchor: [20, 20],
+    popupAnchor: [0, -20],
   });
 };
 
