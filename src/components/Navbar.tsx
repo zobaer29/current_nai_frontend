@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState, AppDispatch } from '../store/store';
 import { setActiveLocationFilter, setSearchQuery } from '../store/outageSlice';
-import { searchLocationIQ } from '../services/geocoding';
+import { searchLocationIQ, reverseGeocodeLocationIQ } from '../services/geocoding';
 import type { GeocodingResult } from '../services/geocoding';
 import { Zap, MapPin, Search, ChevronDown, Check, Home, GraduationCap, Briefcase, Navigation, Loader2 } from 'lucide-react';
 
@@ -16,10 +16,50 @@ export const Navbar: React.FC = () => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [geocodingResults, setGeocodingResults] = useState<GeocodingResult[]>([]);
   const [isSearchingApi, setIsSearchingApi] = useState(false);
+  const [isGettingGps, setIsGettingGps] = useState(false);
 
   const handleLocationSelect = (label: string, lat?: number, lng?: number, areaName?: string) => {
     dispatch(setActiveLocationFilter({ label, lat, lng, areaName }));
     setIsDropdownOpen(false);
+  };
+
+  const handleUseDeviceLocation = () => {
+    setIsGettingGps(true);
+    setIsDropdownOpen(false);
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          const detectedArea = await reverseGeocodeLocationIQ(latitude, longitude);
+          dispatch(setActiveLocationFilter({
+            label: 'Current Location',
+            lat: latitude,
+            lng: longitude,
+            areaName: detectedArea || 'My Area',
+          }));
+          setIsGettingGps(false);
+        },
+        (_error) => {
+          // Fallback to default GPS coordinates if denied/unavailable
+          dispatch(setActiveLocationFilter({
+            label: 'Current Location',
+            lat: 23.8069,
+            lng: 90.3687,
+            areaName: 'Mirpur 10',
+          }));
+          setIsGettingGps(false);
+        },
+        { timeout: 10000, enableHighAccuracy: true }
+      );
+    } else {
+      dispatch(setActiveLocationFilter({
+        label: 'Current Location',
+        lat: 23.8069,
+        lng: 90.3687,
+        areaName: 'Mirpur 10',
+      }));
+      setIsGettingGps(false);
+    }
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,7 +96,7 @@ export const Navbar: React.FC = () => {
           
           {/* Logo & Brand */}
           <div className="flex items-center justify-between w-full md:w-auto">
-            <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => handleLocationSelect('Current Location', 23.8069, 90.3687, 'Mirpur 10')}>
+            <div className="flex items-center gap-2.5 cursor-pointer" onClick={handleUseDeviceLocation}>
               <div className="p-2 bg-red-500/10 border border-red-500/30 text-red-500 rounded-xl shadow-lg shadow-red-500/10 flex items-center justify-center">
                 <Zap className="w-6 h-6 fill-red-500 animate-pulse" />
               </div>
@@ -199,7 +239,8 @@ export const Navbar: React.FC = () => {
 
                   {/* Current Location Option */}
                   <button
-                    onClick={() => handleLocationSelect('Current Location', 23.8069, 90.3687, 'Mirpur 10')}
+                    onClick={handleUseDeviceLocation}
+                    disabled={isGettingGps}
                     className={`w-full text-left px-3.5 py-2.5 text-xs sm:text-sm flex items-center justify-between transition cursor-pointer ${
                       activeLocationFilter === 'Current Location'
                         ? 'bg-indigo-600/20 text-indigo-300 font-semibold'
@@ -207,13 +248,21 @@ export const Navbar: React.FC = () => {
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
-                      <Navigation className="w-4 h-4 text-indigo-400" />
+                      {isGettingGps ? (
+                        <Loader2 className="w-4 h-4 text-indigo-400 animate-spin" />
+                      ) : (
+                        <Navigation className="w-4 h-4 text-indigo-400" />
+                      )}
                       <div>
                         <div>Current Location</div>
-                        <div className="text-[10px] text-slate-400">GPS Approximate</div>
+                        <div className="text-[10px] text-slate-400">
+                          {isGettingGps ? 'Detecting device GPS...' : 'Detect Live Device GPS'}
+                        </div>
                       </div>
                     </div>
-                    {activeLocationFilter === 'Current Location' && <Check className="w-4 h-4 text-indigo-400" />}
+                    {activeLocationFilter === 'Current Location' && !isGettingGps && (
+                      <Check className="w-4 h-4 text-indigo-400" />
+                    )}
                   </button>
 
                   <div className="my-1 border-t border-slate-700/50"></div>

@@ -31,3 +31,27 @@ export async function searchLocationIQ(query: string): Promise<GeocodingResult[]
     return [];
   }
 }
+
+export async function reverseGeocodeLocationIQ(lat: number, lng: number): Promise<string> {
+  const apiKey = import.meta.env.VITE_GEOCODING_API_KEY;
+  if (!apiKey || apiKey.includes('example')) {
+    return 'Current Location';
+  }
+
+  try {
+    const url = `https://us1.locationiq.com/v1/reverse?key=${apiKey}&lat=${lat}&lon=${lng}&format=json`;
+    const response = await fetch(url);
+    if (!response.ok) return 'Current Location';
+
+    const data = await response.json();
+    const address = data.address;
+    if (!address) return 'Current Location';
+
+    // Extract area/suburb/neighbourhood
+    const areaName = address.suburb || address.neighbourhood || address.residential || address.city_district || address.city || address.town || 'Current Location';
+    return areaName;
+  } catch (error) {
+    console.error('LocationIQ reverse geocoding error:', error);
+    return 'Current Location';
+  }
+}
