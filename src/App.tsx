@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState, AppDispatch } from './store/store';
 import { fetchMockOutageData } from './store/outageSlice';
@@ -6,12 +6,15 @@ import { Navbar } from './components/Navbar';
 import { HeroAreaStatusCard } from './components/HeroAreaStatusCard';
 import { InteractiveMap } from './components/InteractiveMap';
 import { SavedPlacesNearbyPanel } from './components/SavedPlacesNearbyPanel';
+import { HistoricalAnalyticsPanel } from './components/HistoricalAnalyticsPanel';
+import { AdminDashboardModal } from './components/AdminDashboardModal';
 import { NotificationToast } from './components/NotificationToast';
-import { Activity, ShieldCheck, Zap, Heart } from 'lucide-react';
+import { Activity, ShieldCheck, Zap, Heart, ShieldAlert } from 'lucide-react';
 
 export default function App() {
   const dispatch = useDispatch<AppDispatch>();
-  const { loading, error } = useSelector((state: RootState) => state.outage);
+  const { loading, error, userRole } = useSelector((state: RootState) => state.outage);
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
 
   useEffect(() => {
     dispatch(fetchMockOutageData());
@@ -20,7 +23,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
       {/* Top Navbar */}
-      <Navbar />
+      <Navbar onOpenAdminConsole={() => setIsAdminModalOpen(true)} />
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -37,6 +40,22 @@ export default function App() {
         {error && (
           <div className="p-4 bg-red-600/20 border border-red-500/30 rounded-2xl text-xs text-red-300">
             ⚠ Failed to load initial outage data: {error}
+          </div>
+        )}
+
+        {/* Admin Bar Trigger Banner if in ADMIN mode */}
+        {userRole === 'ADMIN' && (
+          <div className="bg-red-950/40 border border-red-500/40 p-3.5 rounded-2xl flex items-center justify-between text-xs text-red-300">
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 text-red-400" />
+              <span>Administrator Mode Active (SRS FR-24 / FR-25 / FR-26)</span>
+            </div>
+            <button
+              onClick={() => setIsAdminModalOpen(true)}
+              className="px-3 py-1 bg-red-600 hover:bg-red-500 text-white rounded-lg font-bold transition cursor-pointer"
+            >
+              Open Admin Moderation Console
+            </button>
           </div>
         )}
 
@@ -67,15 +86,20 @@ export default function App() {
           <SavedPlacesNearbyPanel />
         </section>
 
+        {/* 4. SRS Historical Analytics & 24-Hour Timeline Playback */}
+        <section className="space-y-3">
+          <HistoricalAnalyticsPanel />
+        </section>
+
       </main>
 
       {/* Footer */}
       <footer className="border-t border-slate-900 bg-slate-950/90 py-6 mt-12 text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-300">⚡ কারেন্টনাই (CurrentNai)</span>
+            <span className="font-bold text-slate-300">⚡ কারেন্টনাই (CurrentNai v1.0)</span>
             <span>—</span>
-            <span>Crowdsourced Electricity Outage Platform Bangladesh</span>
+            <span>Bangladesh Community-Powered Electricity Outage Detection Platform</span>
           </div>
           <div className="flex items-center gap-4 text-slate-400">
             <span className="flex items-center gap-1">
@@ -88,6 +112,12 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* SRS Admin Moderation Console Modal */}
+      <AdminDashboardModal
+        isOpen={isAdminModalOpen}
+        onClose={() => setIsAdminModalOpen(false)}
+      />
 
       {/* Floating Action Feedback Notification */}
       <NotificationToast />

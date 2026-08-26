@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState, AppDispatch } from '../store/store';
-import { setMapViewMode, toggleHeatmap } from '../store/outageSlice';
+import { setMapViewMode, toggleHeatmap, setSelectedRadius, confirmIncident } from '../store/outageSlice';
+import type { RadiusFilter } from '../types';
 import { MapContainer, TileLayer, Marker, Popup, Circle, CircleMarker, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { Navigation, Flame, Globe } from 'lucide-react';
+import { Navigation, Flame, Globe, ZapOff, Zap } from 'lucide-react';
 
 // Controller component to smoothly adjust Leaflet view when coordinates change
 const MapViewController: React.FC<{ coords: { lat: number; lng: number }; zoom: number }> = ({ coords, zoom }) => {
@@ -83,13 +84,18 @@ export const InteractiveMap: React.FC = () => {
     incidents,
     mapViewMode,
     heatmapEnabled,
+    selectedRadius,
   } = useSelector((state: RootState) => state.outage);
-
 
   const zoom = mapViewMode === 'WHOLE_BANGLADESH' ? 7 : 13;
 
+  const radiusInMeters =
+    selectedRadius === '500m' ? 500 :
+    selectedRadius === '1km' ? 1000 :
+    selectedRadius === '3km' ? 3000 : 5000;
+
   return (
-    <div className="relative w-full h-[520px] rounded-3xl overflow-hidden border border-slate-700/80 shadow-2xl bg-slate-950">
+    <div className="relative w-full h-[540px] rounded-3xl overflow-hidden border border-slate-700/80 shadow-2xl bg-slate-950">
       
       {/* Map Control Overlay Pills */}
       <div className="absolute top-4 left-4 z-[400] flex flex-wrap items-center gap-2">
@@ -120,10 +126,27 @@ export const InteractiveMap: React.FC = () => {
           <span>🇧🇩 Whole Bangladesh</span>
         </button>
 
+        {/* Radius Filter Pills (FR-15) */}
+        <div className="flex items-center bg-slate-900/80 border border-slate-700 rounded-xl p-0.5 backdrop-blur-md shadow-lg">
+          {(['500m', '1km', '3km', '5km'] as RadiusFilter[]).map((r) => (
+            <button
+              key={r}
+              onClick={() => dispatch(setSelectedRadius(r))}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer ${
+                selectedRadius === r
+                  ? 'bg-indigo-600 text-white shadow'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {r}
+            </button>
+          ))}
+        </div>
+
         {/* Heatmap Toggle Pill */}
         <button
           onClick={() => dispatch(toggleHeatmap())}
-          className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-lg backdrop-blur-md ${
+          className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-lg backdrop-blur-md ${
             heatmapEnabled
               ? 'bg-amber-500 text-slate-950 font-bold ring-2 ring-amber-300'
               : 'bg-slate-900/80 hover:bg-slate-800 text-slate-300 border border-slate-700'
@@ -136,7 +159,7 @@ export const InteractiveMap: React.FC = () => {
 
       {/* Map Legend Overlay (Bottom Right) */}
       <div className="absolute bottom-4 right-4 z-[400] bg-slate-900/90 border border-slate-800 p-3 rounded-2xl backdrop-blur-md text-[11px] text-slate-300 space-y-1.5 shadow-xl hidden sm:block">
-        <div className="font-bold text-white text-xs mb-1">Map Legend</div>
+        <div className="font-bold text-white text-xs mb-1">SRS Map Legend</div>
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-full bg-red-500"></span>
           <span>Confirmed Outage</span>
@@ -151,7 +174,7 @@ export const InteractiveMap: React.FC = () => {
         </div>
         <div className="flex items-center gap-2">
           <span className="w-3 h-3 rounded-full bg-indigo-500"></span>
-          <span>Approximate User Area</span>
+          <span>User Radius ({selectedRadius})</span>
         </div>
       </div>
 
@@ -171,8 +194,7 @@ export const InteractiveMap: React.FC = () => {
           url={import.meta.env.VITE_MAP_TILE_URL || 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'}
         />
 
-
-        {/* User Location Marker & Privacy Approximate Radius */}
+        {/* User Location Marker & Radius Circle */}
         <Marker
           position={[selectedCoords.lat, selectedCoords.lng]}
           icon={createUserLocationIcon()}
@@ -180,10 +202,10 @@ export const InteractiveMap: React.FC = () => {
           <Popup className="dark-popup">
             <div className="p-1 text-slate-900 font-sans">
               <div className="font-bold text-xs flex items-center gap-1 text-indigo-700">
-                <Navigation className="w-3.5 h-3.5" /> You Are Here
+                <Navigation className="w-3.5 h-3.5" /> Active User Center
               </div>
               <p className="text-[11px] text-slate-600 mt-0.5">
-                Privacy Protected: Exact GPS coordinates are not publicly exposed.
+                Privacy Radius: {selectedRadius} grid monitoring zone.
               </p>
             </div>
           </Popup>
@@ -192,7 +214,7 @@ export const InteractiveMap: React.FC = () => {
         {/* User Privacy Circle */}
         <Circle
           center={[selectedCoords.lat, selectedCoords.lng]}
-          radius={800}
+          radius={radiusInMeters}
           pathOptions={{
             color: '#6366f1',
             fillColor: '#818cf8',
@@ -242,9 +264,9 @@ export const InteractiveMap: React.FC = () => {
               {/* Animated Marker Overlay */}
               <Marker position={[inc.lat, inc.lng]} icon={icon}>
                 <Popup>
-                  <div className="p-2 text-slate-900 font-sans min-w-[180px]">
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <span className="font-bold text-sm text-slate-900">{inc.area}</span>
+                  <div className="p-2.5 text-slate-900 font-sans min-w-[210px] space-y-2">
+                    <div className="flex items-center justify-between gap-2 border-b border-slate-200 pb-1.5">
+                      <span className="font-extrabold text-sm text-slate-900">{inc.area}</span>
                       <span
                         className={`text-[10px] font-bold px-1.5 py-0.5 rounded text-white ${
                           isConfirmed ? 'bg-red-600' : isResolved ? 'bg-emerald-600' : 'bg-amber-600'
@@ -254,22 +276,46 @@ export const InteractiveMap: React.FC = () => {
                       </span>
                     </div>
 
-                    <div className="text-xs space-y-1 text-slate-700 mt-2 border-t border-slate-200 pt-1.5">
+                    {/* Electrical Grid Metadata (FR-11) */}
+                    {inc.substation && (
+                      <div className="bg-slate-100 p-1.5 rounded-lg text-[10px] text-slate-700">
+                        <div>Grid: <strong>{inc.substation}</strong></div>
+                        {inc.feederName && <div>Feeder: <strong>{inc.feederName}</strong></div>}
+                      </div>
+                    )}
+
+                    <div className="text-xs space-y-1 text-slate-700">
                       <div className="flex justify-between">
-                        <span>Reports:</span>
+                        <span>User Reports:</span>
                         <strong className="text-slate-900">{inc.reports}</strong>
                       </div>
                       <div className="flex justify-between">
                         <span>Confidence:</span>
                         <strong className="text-slate-900">{inc.confidence}%</strong>
                       </div>
-                      {inc.updatedAt && (
-                        <div className="flex justify-between text-[10px] text-slate-500">
-                          <span>Updated:</span>
-                          <span>{inc.updatedAt}</span>
-                        </div>
-                      )}
                     </div>
+
+                    {/* FR-08: Community Confirmation Action Buttons */}
+                    {!isResolved && (
+                      <div className="pt-2 border-t border-slate-200 space-y-1.5">
+                        <div className="text-[10px] font-bold text-slate-500 uppercase">Community Confirmation (FR-08):</div>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <button
+                            onClick={() => dispatch(confirmIncident({ incidentId: inc.id, confirmType: 'NO_POWER' }))}
+                            className="py-1 px-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer"
+                          >
+                            <ZapOff className="w-3 h-3" /> NO POWER
+                          </button>
+
+                          <button
+                            onClick={() => dispatch(confirmIncident({ incidentId: inc.id, confirmType: 'HAS_POWER' }))}
+                            className="py-1 px-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer"
+                          >
+                            <Zap className="w-3 h-3" /> HAS POWER
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </Popup>
               </Marker>

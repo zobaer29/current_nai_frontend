@@ -1,62 +1,163 @@
 {
-    "currentUser": {
-        "id": "usr_01",
-        "name": "Zobaer Islam",
-        "savedLocations": [
-            {
-                "id": "loc_1",
-                "name": "Home",
-                "area": "Mirpur 10",
-                "lat": 23.8069,
-                "lng": 90.3687
-            },
-            {
-                "id": "loc_2",
-                "name": "University",
-                "area": "United International University",
-                "lat": 23.7977,
-                "lng": 90.4497
-            },
-            {
-                "id": "loc_3",
-                "name": "Office",
-                "area": "Banani",
-                "lat": 23.7937,
-                "lng": 90.4066
-            }
-        ]
+  "currentAreaStatus": {
+    "areaName": "Mirpur 10",
+    "district": "Dhaka",
+    "division": "Dhaka",
+    "status": "POSSIBLE_OUTAGE",
+    "reportsCount": 23,
+    "confidenceScore": 91,
+    "activeMinutes": 47,
+    "nearbyStats": {
+      "offCount": 29,
+      "onCount": 8
+    }
+  },
+  "incidents": [
+    {
+      "id": "inc-101",
+      "area": "Mirpur 10",
+      "district": "Dhaka",
+      "division": "Dhaka",
+      "lat": 23.8069,
+      "lng": 90.3687,
+      "status": "CONFIRMED",
+      "problemType": "POWER_OFF",
+      "reports": 23,
+      "confidence": 91,
+      "substation": "Mirpur 132/33kV SS",
+      "feederName": "F-04 Mirpur Residential",
+      "updatedAt": "2 mins ago",
+      "startedAt": "47 mins ago",
+      "confirmationsOff": 18,
+      "confirmationsOn": 2
     },
-    "currentArea": {
-        "areaName": "Mirpur 10",
-        "status": "POSSIBLE_OUTAGE",
-        "reportsCount": 23,
-        "confidenceScore": 91,
-        "activeMinutes": 47,
-        "nearbyStats": {
-            "offCount": 29,
-            "onCount": 8
-        }
+    {
+      "id": "inc-102",
+      "area": "UIU, Vatara",
+      "district": "Dhaka",
+      "division": "Dhaka",
+      "lat": 23.7979,
+      "lng": 90.4497,
+      "status": "POSSIBLE",
+      "problemType": "VOLTAGE_ISSUE",
+      "reports": 8,
+      "confidence": 64,
+      "substation": "Vatara 33kV SS",
+      "feederName": "F-02 Badda-UIU Line",
+      "updatedAt": "5 mins ago",
+      "startedAt": "15 mins ago",
+      "confirmationsOff": 6,
+      "confirmationsOn": 1
     },
-    "incidents": [
-        {
-            "id": "inc_101",
-            "area": "Mirpur 10",
-            "lat": 23.8069,
-            "lng": 90.3687,
-            "status": "POSSIBLE",
-            "reports": 23,
-            "confidence": 91,
-            "h3Index": "896526315ffffff"
-        },
-        {
-            "id": "inc_102",
-            "area": "Banani",
-            "lat": 23.7937,
-            "lng": 90.4066,
-            "status": "CONFIRMED",
-            "reports": 45,
-            "confidence": 98,
-            "h3Index": "896526316ffffff"
-        }
-    ]
+    {
+      "id": "inc-103",
+      "area": "Banani Block C",
+      "district": "Dhaka",
+      "division": "Dhaka",
+      "lat": 23.7937,
+      "lng": 90.4066,
+      "status": "RESOLVED",
+      "problemType": "POWER_ON",
+      "reports": 15,
+      "confidence": 98,
+      "substation": "Gulshan 132/33kV SS",
+      "feederName": "F-09 Banani Commercial",
+      "updatedAt": "Just now",
+      "startedAt": "1 hr 20 mins ago",
+      "confirmationsOff": 1,
+      "confirmationsOn": 14
+    },
+    {
+      "id": "inc-104",
+      "area": "Dhanmondi 27",
+      "district": "Dhaka",
+      "division": "Dhaka",
+      "lat": 23.7542,
+      "lng": 90.3767,
+      "status": "CONFIRMED",
+      "problemType": "POWER_OFF",
+      "reports": 31,
+      "confidence": 88,
+      "substation": "Dhanmondi SS",
+      "feederName": "F-01 Dhanmondi Residential",
+      "updatedAt": "1 min ago",
+      "startedAt": "35 mins ago",
+      "confirmationsOff": 27,
+      "confirmationsOn": 3
+    },
+    {
+      "id": "inc-105",
+      "area": "Agrabad Commercial Area",
+      "district": "Chittagong",
+      "division": "Chittagong",
+      "lat": 22.3275,
+      "lng": 91.8123,
+      "status": "CONFIRMED",
+      "problemType": "POWER_OFF",
+      "reports": 42,
+      "confidence": 95,
+      "substation": "Agrabad Grid SS",
+      "feederName": "F-07 Port Road",
+      "updatedAt": "3 mins ago",
+      "startedAt": "1 hr 10 mins ago",
+      "confirmationsOff": 38,
+      "confirmationsOn": 4
+    },
+    {
+      "id": "inc-106",
+      "area": "Zindabazar",
+      "district": "Sylhet",
+      "division": "Sylhet",
+      "lat": 24.8949,
+      "lng": 91.8687,
+      "status": "POSSIBLE",
+      "problemType": "FLUCTUATION",
+      "reports": 12,
+      "confidence": 58,
+      "substation": "Sylhet Sadar SS",
+      "feederName": "F-03 Town Line",
+      "updatedAt": "10 mins ago",
+      "startedAt": "25 mins ago",
+      "confirmationsOff": 9,
+      "confirmationsOn": 2
+    }
+  ],
+  "savedLocations": [
+    {
+      "id": "loc-1",
+      "name": "Home",
+      "area": "Mirpur 10",
+      "lat": 23.8069,
+      "lng": 90.3687,
+      "status": "POSSIBLE_OUTAGE",
+      "reportsCount": 23
+    },
+    {
+      "id": "loc-2",
+      "name": "University",
+      "area": "UIU, Vatara",
+      "lat": 23.7979,
+      "lng": 90.4497,
+      "status": "POSSIBLE_OUTAGE",
+      "reportsCount": 8
+    },
+    {
+      "id": "loc-3",
+      "name": "Office",
+      "area": "Banani C",
+      "lat": 23.7937,
+      "lng": 90.4066,
+      "status": "POWER_AVAILABLE",
+      "reportsCount": 0
+    }
+  ],
+  "historicalPoints": [
+    { "hour": 0, "timeLabel": "00:00 AM", "activeOutages": 5, "affectedAreas": ["Mirpur 10"] },
+    { "hour": 4, "timeLabel": "04:00 AM", "activeOutages": 2, "affectedAreas": ["Dhanmondi 27"] },
+    { "hour": 8, "timeLabel": "08:00 AM", "activeOutages": 14, "affectedAreas": ["Mirpur 10", "UIU Vatara", "Agrabad"] },
+    { "hour": 12, "timeLabel": "12:00 PM", "activeOutages": 28, "affectedAreas": ["Mirpur 10", "Dhanmondi 27", "Agrabad", "Zindabazar"] },
+    { "hour": 16, "timeLabel": "04:00 PM", "activeOutages": 19, "affectedAreas": ["Mirpur 10", "Agrabad"] },
+    { "hour": 20, "timeLabel": "08:00 PM", "activeOutages": 35, "affectedAreas": ["Mirpur 10", "UIU Vatara", "Dhanmondi 27", "Agrabad", "Zindabazar"] },
+    { "hour": 24, "timeLabel": "Now", "activeOutages": 23, "affectedAreas": ["Mirpur 10", "UIU Vatara", "Dhanmondi 27", "Agrabad"] }
+  ]
 }

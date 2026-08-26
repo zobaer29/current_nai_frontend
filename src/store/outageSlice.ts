@@ -1,25 +1,33 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import type { PayloadAction } from '@reduxjs/toolkit';
-import type { Incident, AreaStatus, SavedLocation, MapViewFilter } from '../types';
+import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/toolkit';
+import type {
+  Incident,
+  AreaStatus,
+  SavedLocation,
+  MapViewFilter,
+  PowerStatus,
+  UserRole,
+  RadiusFilter,
+  HistoricalOutagePoint,
+  RegionHierarchy,
+} from '../types';
 
-export interface LocationFilterPayload {
-  label: string;
-  lat?: number;
-  lng?: number;
-  areaName?: string;
-}
-
-interface OutageState {
+export interface OutageState {
   currentAreaStatus: AreaStatus | null;
   incidents: Incident[];
   savedLocations: SavedLocation[];
+  historicalPoints: HistoricalOutagePoint[];
   activeLocationFilter: string;
   selectedCoords: { lat: number; lng: number };
   mapViewMode: MapViewFilter;
   heatmapEnabled: boolean;
+  selectedRadius: RadiusFilter;
+  timeSliderHour: number;
+  isPlaybackPlaying: boolean;
+  userRole: UserRole;
+  selectedRegion: RegionHierarchy;
   searchQuery: string;
-  userReportedState: 'POWER_OFF' | 'POWER_ON' | null;
-  userFeedbackToast: { message: string; type: 'off' | 'on' } | null;
+  userReportedState: PowerStatus | null;
+  notificationToast: { message: string; type: 'success' | 'error' | 'info' } | null;
   loading: boolean;
   error: string | null;
 }
@@ -33,123 +41,185 @@ const initialState: OutageState = {
   currentAreaStatus: null,
   incidents: [],
   savedLocations: [],
+  historicalPoints: [],
   activeLocationFilter: 'Current Location',
   selectedCoords: DEFAULT_CENTER,
   mapViewMode: 'NEAR_ME',
   heatmapEnabled: false,
+  selectedRadius: '1km',
+  timeSliderHour: 24,
+  isPlaybackPlaying: false,
+  userRole: 'REGISTERED',
+  selectedRegion: {
+    division: 'All Divisions',
+    district: 'All Districts',
+    upazila: 'All Upazilas',
+    area: 'All Areas',
+  },
   searchQuery: '',
   userReportedState: null,
-  userFeedbackToast: null,
+  notificationToast: null,
   loading: false,
   error: null,
 };
 
-// Fetch mock data from public/data/mockData.json using VITE_USE_MOCK_DATA logic
 export const fetchMockOutageData = createAsyncThunk(
   'outage/fetchMockData',
-  async () => {
-    const isMock = import.meta.env.VITE_USE_MOCK_DATA === 'true' || true;
-    const dataUrl = isMock ? '/data/mockData.json' : `${import.meta.env.VITE_API_BASE_URL}/outages`;
-    
-    const response = await fetch(dataUrl);
-    if (!response.ok) throw new Error('Failed to fetch outage data');
-    return await response.json();
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await fetch('/data/mockData.json');
+      if (!response.ok) {
+        throw new Error('Failed to fetch mock data');
+      }
+      const data = await response.json();
+      return data;
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        return rejectWithValue(err.message);
+      }
+      return rejectWithValue('An unknown error occurred');
+    }
   }
 );
 
-const outageSlice = createSlice({
+export const outageSlice = createSlice({
   name: 'outage',
   initialState,
   reducers: {
-    setActiveLocationFilter: (state, action: PayloadAction<LocationFilterPayload | string>) => {
-      if (typeof action.payload === 'string') {
-        state.activeLocationFilter = action.payload;
-      } else {
-        state.activeLocationFilter = action.payload.label;
-        if (action.payload.lat && action.payload.lng) {
-          state.selectedCoords = { lat: action.payload.lat, lng: action.payload.lng };
-        }
-        if (action.payload.areaName && state.currentAreaStatus) {
-          state.currentAreaStatus.areaName = action.payload.areaName;
-        }
+    setActiveLocationFilter: (
+      state,
+      action: PayloadAction<{ label: string; lat?: number; lng?: number; areaName?: string }>
+    ) => {
+      const { label, lat, lng, areaName } = action.payload;
+      state.activeLocationFilter = label;
+      if (lat !== undefined && lng !== undefined) {
+        state.selectedCoords = { lat, lng };
       }
-    },
-    setSelectedCoords: (state, action: PayloadAction<{ lat: number; lng: number }>) => {
-      state.selectedCoords = action.payload;
+      if (areaName && state.currentAreaStatus) {
+        state.currentAreaStatus.areaName = areaName;
+      }
     },
     setMapViewMode: (state, action: PayloadAction<MapViewFilter>) => {
       state.mapViewMode = action.payload;
-      if (action.payload === 'WHOLE_BANGLADESH') {
-        state.selectedCoords = { lat: 23.6850, lng: 90.3563 };
-      } else {
-        state.selectedCoords = DEFAULT_CENTER;
-      }
     },
     toggleHeatmap: (state) => {
       state.heatmapEnabled = !state.heatmapEnabled;
     },
+    setSelectedRadius: (state, action: PayloadAction<RadiusFilter>) => {
+      state.selectedRadius = action.payload;
+      state.notificationToast = {
+        message: `Filter radius updated to ${action.payload}`,
+        type: 'info',
+      };
+    },
+    setTimeSliderHour: (state, action: PayloadAction<number>) => {
+      state.timeSliderHour = action.payload;
+    },
+    togglePlayback: (state) => {
+      state.isPlaybackPlaying = !state.isPlaybackPlaying;
+    },
+    setUserRole: (state, action: PayloadAction<UserRole>) => {
+      state.userRole = action.payload;
+      state.notificationToast = {
+        message: `Switched view mode to ${action.payload}`,
+        type: 'info',
+      };
+    },
+    setSelectedRegion: (state, action: PayloadAction<Partial<RegionHierarchy>>) => {
+      state.selectedRegion = { ...state.selectedRegion, ...action.payload };
+    },
     setSearchQuery: (state, action: PayloadAction<string>) => {
       state.searchQuery = action.payload;
     },
-    reportPowerStatus: (state, action: PayloadAction<'POWER_OFF' | 'POWER_ON' | { status: string; area: string }>) => {
-      let statusStr: 'POWER_OFF' | 'POWER_ON' = 'POWER_OFF';
-      if (typeof action.payload === 'string') {
-        statusStr = action.payload;
-      } else if (action.payload.status === 'POWER_ON' || action.payload.status === 'POWER_OFF') {
-        statusStr = action.payload.status;
-      }
+    reportPowerStatus: (state, action: PayloadAction<PowerStatus>) => {
+      state.userReportedState = action.payload;
+      const area = state.currentAreaStatus?.areaName || 'Your Area';
 
-      const isOff = statusStr === 'POWER_OFF';
-      state.userReportedState = statusStr;
-
-      if (state.currentAreaStatus) {
-        if (isOff) {
+      if (action.payload === 'POWER_OFF') {
+        state.notificationToast = {
+          message: `🔴 Report recorded for ${area}! Community confidence updated.`,
+          type: 'error',
+        };
+        if (state.currentAreaStatus) {
           state.currentAreaStatus.reportsCount += 1;
-          state.currentAreaStatus.nearbyStats.offCount += 1;
-          state.currentAreaStatus.status = 'POSSIBLE_OUTAGE';
-          state.currentAreaStatus.confidenceScore = Math.min(99, state.currentAreaStatus.confidenceScore + 1);
-        } else {
-          state.currentAreaStatus.nearbyStats.onCount += 1;
-          if (state.currentAreaStatus.nearbyStats.onCount > 15) {
+          state.currentAreaStatus.confidenceScore = Math.min(100, state.currentAreaStatus.confidenceScore + 3);
+          state.currentAreaStatus.status = 'CONFIRMED_OUTAGE';
+        }
+      } else if (action.payload === 'POWER_ON') {
+        state.notificationToast = {
+          message: `🟢 Power restoration reported for ${area}! Thank you.`,
+          type: 'success',
+        };
+        if (state.currentAreaStatus) {
+          state.currentAreaStatus.reportsCount = Math.max(0, state.currentAreaStatus.reportsCount - 1);
+          state.currentAreaStatus.confidenceScore = Math.max(10, state.currentAreaStatus.confidenceScore - 15);
+          if (state.currentAreaStatus.reportsCount === 0) {
             state.currentAreaStatus.status = 'POWER_AVAILABLE';
           }
         }
+      } else if (action.payload === 'VOLTAGE_ISSUE') {
+        state.notificationToast = {
+          message: `🟡 Voltage issue reported for ${area}.`,
+          type: 'info',
+        };
+      } else if (action.payload === 'FLUCTUATION') {
+        state.notificationToast = {
+          message: `⚠️ Frequent fluctuation reported for ${area}.`,
+          type: 'info',
+        };
       }
-
-      const currentArea = state.currentAreaStatus?.areaName || 'Mirpur 10';
-      const existingInc = state.incidents.find(i => i.area === currentArea);
-      if (existingInc) {
-        if (isOff) {
-          existingInc.reports += 1;
-          existingInc.status = 'CONFIRMED';
-          existingInc.updatedAt = 'Just now';
+    },
+    confirmIncident: (
+      state,
+      action: PayloadAction<{ incidentId: string; confirmType: 'NO_POWER' | 'HAS_POWER' }>
+    ) => {
+      const { incidentId, confirmType } = action.payload;
+      const incident = state.incidents.find((i) => i.id === incidentId);
+      if (incident) {
+        if (confirmType === 'NO_POWER') {
+          incident.confirmationsOff = (incident.confirmationsOff || 0) + 1;
+          incident.reports += 1;
+          incident.confidence = Math.min(100, incident.confidence + 4);
+          state.notificationToast = {
+            message: `Confirmed outage for ${incident.area}. Confidence +4%`,
+            type: 'error',
+          };
         } else {
-          existingInc.status = 'RESOLVED';
-          existingInc.updatedAt = 'Just now';
+          incident.confirmationsOn = (incident.confirmationsOn || 0) + 1;
+          incident.confidence = Math.max(0, incident.confidence - 8);
+          if (incident.confidence < 30) {
+            incident.status = 'RESOLVED';
+          }
+          state.notificationToast = {
+            message: `Confirmed power restored for ${incident.area}.`,
+            type: 'success',
+          };
         }
-      } else {
-        state.incidents.push({
-          id: `inc_${Date.now()}`,
-          area: currentArea,
-          lat: state.selectedCoords.lat,
-          lng: state.selectedCoords.lng,
-          status: isOff ? 'POSSIBLE' : 'RESOLVED',
-          reports: 1,
-          confidence: 85,
-          updatedAt: 'Just now'
-        });
       }
-
-      state.userFeedbackToast = {
-        message: isOff 
-          ? '🔴 আপনার রিপোর্ট জমা হয়েছে! তথ্য আপডেটেড রাখা হচ্ছে।' 
-          : '🟢 পাওয়ার রিস্টোর রিপোর্ট জমা হয়েছে! ধন্যবাদ।',
-        type: isOff ? 'off' : 'on'
+    },
+    adminDeleteIncident: (state, action: PayloadAction<string>) => {
+      state.incidents = state.incidents.filter((inc) => inc.id !== action.payload);
+      state.notificationToast = {
+        message: 'Admin: Incident removed successfully.',
+        type: 'info',
       };
     },
-    dismissToast: (state) => {
-      state.userFeedbackToast = null;
-    }
+    adminMergeIncidents: (state, action: PayloadAction<{ targetId: string; sourceId: string }>) => {
+      const target = state.incidents.find((i) => i.id === action.payload.targetId);
+      const source = state.incidents.find((i) => i.id === action.payload.sourceId);
+      if (target && source) {
+        target.reports += source.reports;
+        target.confidence = Math.min(100, target.confidence + 5);
+        state.incidents = state.incidents.filter((i) => i.id !== action.payload.sourceId);
+        state.notificationToast = {
+          message: `Admin: Merged incident ${source.area} into ${target.area}`,
+          type: 'info',
+        };
+      }
+    },
+    clearToast: (state) => {
+      state.notificationToast = null;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -159,25 +229,33 @@ const outageSlice = createSlice({
       })
       .addCase(fetchMockOutageData.fulfilled, (state, action) => {
         state.loading = false;
-        state.currentAreaStatus = action.payload.currentArea;
+        state.currentAreaStatus = action.payload.currentAreaStatus;
         state.incidents = action.payload.incidents;
-        state.savedLocations = action.payload.currentUser.savedLocations;
+        state.savedLocations = action.payload.savedLocations;
+        state.historicalPoints = action.payload.historicalPoints || [];
       })
       .addCase(fetchMockOutageData.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.error.message || 'Error loading outage data';
+        state.error = action.payload as string;
       });
   },
 });
 
 export const {
   setActiveLocationFilter,
-  setSelectedCoords,
   setMapViewMode,
   toggleHeatmap,
+  setSelectedRadius,
+  setTimeSliderHour,
+  togglePlayback,
+  setUserRole,
+  setSelectedRegion,
   setSearchQuery,
   reportPowerStatus,
-  dismissToast,
+  confirmIncident,
+  adminDeleteIncident,
+  adminMergeIncidents,
+  clearToast,
 } = outageSlice.actions;
 
 export default outageSlice.reducer;
