@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState, AppDispatch } from '../store/store';
 import { setActiveLocationFilter, setSearchQuery } from '../store/outageSlice';
-import { Zap, MapPin, Search, ChevronDown, Check, Home, GraduationCap, Briefcase, Navigation } from 'lucide-react';
+import { searchLocationIQ } from '../services/geocoding';
+import type { GeocodingResult } from '../services/geocoding';
+import { Zap, MapPin, Search, ChevronDown, Check, Home, GraduationCap, Briefcase, Navigation, Loader2 } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -12,6 +14,8 @@ export const Navbar: React.FC = () => {
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [geocodingResults, setGeocodingResults] = useState<GeocodingResult[]>([]);
+  const [isSearchingApi, setIsSearchingApi] = useState(false);
 
   const handleLocationSelect = (label: string, lat?: number, lng?: number, areaName?: string) => {
     dispatch(setActiveLocationFilter({ label, lat, lng, areaName }));
@@ -22,8 +26,26 @@ export const Navbar: React.FC = () => {
     dispatch(setSearchQuery(e.target.value));
   };
 
-  // Search autocomplete options based on incidents & saved locations
-  const searchSuggestions = incidents.filter((inc) =>
+  // Debounced search with LocationIQ Geocoding API
+  useEffect(() => {
+    if (!searchQuery.trim() || searchQuery.length < 3) {
+      setGeocodingResults([]);
+      setIsSearchingApi(false);
+      return;
+    }
+
+    setIsSearchingApi(true);
+    const timer = setTimeout(async () => {
+      const results = await searchLocationIQ(searchQuery);
+      setGeocodingResults(results);
+      setIsSearchingApi(false);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Local incident matches
+  const localIncidentMatches = incidents.filter((inc) =>
     searchQuery.trim() !== '' && inc.area.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -62,48 +84,93 @@ export const Navbar: React.FC = () => {
           {/* Controls: Search & Location Picker */}
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto flex-1 max-w-2xl justify-end">
             
-            {/* Search Bar */}
-            <div className="relative w-full sm:w-64 md:w-72">
+            {/* LocationIQ-powered Live Search Bar */}
+            <div className="relative w-full sm:w-64 md:w-80">
               <div className="relative">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                {isSearchingApi ? (
+                  <Loader2 className="w-4 h-4 text-indigo-400 animate-spin absolute left-3 top-1/2 -translate-y-1/2" />
+                ) : (
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                )}
                 <input
                   type="text"
-                  placeholder="Search area (e.g. Mirpur, Banani)..."
+                  placeholder="Search any place in BD (e.g. Uttara, UIU, Banani)..."
                   value={searchQuery}
                   onChange={handleSearchChange}
                   onFocus={() => setIsSearchFocused(true)}
-                  onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
+                  onBlur={() => setTimeout(() => setIsSearchFocused(false), 250)}
                   className="w-full pl-9 pr-4 py-2 bg-slate-800/80 border border-slate-700/70 rounded-xl text-xs sm:text-sm text-slate-200 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
                 />
               </div>
 
-              {/* Autocomplete Dropdown */}
-              {isSearchFocused && searchSuggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden">
-                  <div className="px-3 py-1.5 text-[10px] uppercase font-semibold text-slate-400 border-b border-slate-700/50">
-                    Matching Outage Areas
-                  </div>
-                  {searchSuggestions.map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        handleLocationSelect(item.area, item.lat, item.lng, item.area);
-                        dispatch(setSearchQuery(''));
-                      }}
-                      className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:bg-slate-700/70 flex items-center justify-between transition cursor-pointer"
-                    >
-                      <span className="flex items-center gap-2">
-                        <MapPin className="w-3.5 h-3.5 text-indigo-400" />
-                        {item.area}
-                      </span>
-                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                        item.status === 'CONFIRMED' ? 'bg-red-500/20 text-red-400' :
-                        item.status === 'POSSIBLE' ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'
-                      }`}>
-                        {item.reports} reports
-                      </span>
-                    </button>
-                  ))}
+              {/* LocationIQ & Local Autocomplete Dropdown */}
+              {isSearchFocused && searchQuery.trim().length >= 2 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-slate-800/95 border border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden backdrop-blur-xl">
+                  
+                  {/* Local Incident Matches */}
+                  {localIncidentMatches.length > 0 && (
+                    <div>
+                      <div className="px-3 py-1.5 text-[10px] uppercase font-bold text-amber-400 bg-amber-500/10 border-b border-slate-700/50">
+                        ⚡ Active Incident Areas
+                      </div>
+                      {localIncidentMatches.map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={() => {
+                            handleLocationSelect(item.area, item.lat, item.lng, item.area);
+                            dispatch(setSearchQuery(''));
+                          }}
+                          className="w-full text-left px-3.5 py-2 text-xs text-slate-200 hover:bg-slate-700/70 flex items-center justify-between transition cursor-pointer"
+                        >
+                          <span className="flex items-center gap-2 truncate">
+                            <MapPin className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
+                            <span className="truncate">{item.area}</span>
+                          </span>
+                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+                            item.status === 'CONFIRMED' ? 'bg-red-500/20 text-red-400' :
+                            item.status === 'POSSIBLE' ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'
+                          }`}>
+                            {item.reports} reports
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* LocationIQ Live Geocoding Results */}
+                  {geocodingResults.length > 0 && (
+                    <div>
+                      <div className="px-3 py-1.5 text-[10px] uppercase font-bold text-indigo-400 bg-indigo-500/10 border-b border-slate-700/50">
+                        📍 LocationIQ Search (Bangladesh)
+                      </div>
+                      {geocodingResults.map((item) => {
+                        const shortName = item.display_name.split(',')[0];
+                        return (
+                          <button
+                            key={item.place_id}
+                            onClick={() => {
+                              handleLocationSelect(shortName, item.lat, item.lng, shortName);
+                              dispatch(setSearchQuery(''));
+                            }}
+                            className="w-full text-left px-3.5 py-2.5 text-xs text-slate-200 hover:bg-slate-700/70 flex items-start gap-2.5 transition cursor-pointer"
+                          >
+                            <MapPin className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                            <div className="truncate">
+                              <div className="font-semibold text-white truncate">{shortName}</div>
+                              <div className="text-[10px] text-slate-400 truncate">{item.display_name}</div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Empty State */}
+                  {!isSearchingApi && localIncidentMatches.length === 0 && geocodingResults.length === 0 && (
+                    <div className="px-4 py-3 text-xs text-slate-400 text-center">
+                      No matching Bangladesh locations found.
+                    </div>
+                  )}
                 </div>
               )}
             </div>
